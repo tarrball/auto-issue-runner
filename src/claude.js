@@ -131,23 +131,23 @@ Focus on implementing a complete, working solution that addresses all aspects of
    * @private
    */
   async runClaudeCommand(promptPath) {
-    return new Promise((resolve, reject) => {
-      const command = 'claude';
-      const args = [
-        '--print',
-        `$(cat "${promptPath}")`
-      ];
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Read the prompt file content
+        const promptContent = await fs.readFile(promptPath, 'utf8');
+        
+        const command = 'claude';
+        const args = ['--print', promptContent];
 
-      console.log(`Executing: ${command} ${args.join(' ')}`);
+        console.log(`Executing: ${command} --print [prompt content]`);
 
-      const child = spawn(command, args, {
-        stdio: 'pipe',
-        shell: true
-      });
+        const child = spawn(command, args, {
+          stdio: 'pipe'
+        });
 
-      let stdout = '';
-      let stderr = '';
-      let timeoutHandle;
+        let stdout = '';
+        let stderr = '';
+        let timeoutHandle;
 
       child.stdout?.on('data', (data) => {
         const output = data.toString();
@@ -176,11 +176,15 @@ Focus on implementing a complete, working solution that addresses all aspects of
         reject(new Error(`Failed to spawn Claude Code: ${error.message}`));
       });
 
-      // Set timeout with buffer beyond Claude's internal timeout
-      timeoutHandle = setTimeout(() => {
-        child.kill('SIGTERM');
-        reject(new Error('Claude Code timed out'));
-      }, CONFIG.claude.timeoutMs + 10000);
+        // Set timeout with buffer beyond Claude's internal timeout
+        timeoutHandle = setTimeout(() => {
+          child.kill('SIGTERM');
+          reject(new Error('Claude Code timed out'));
+        }, CONFIG.claude.timeoutMs + 10000);
+        
+      } catch (error) {
+        reject(new Error(`Failed to read prompt file: ${error.message}`));
+      }
     });
   }
 
