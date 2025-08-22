@@ -1,5 +1,4 @@
 import github from './github.js';
-import { CONFIG } from './config.js';
 
 /**
  * Handles issue selection and filtering logic
