@@ -137,7 +137,12 @@ Focus on implementing a complete, working solution that addresses all aspects of
         const promptContent = await fs.readFile(promptPath, 'utf8');
         
         const command = 'claude';
-        const args = ['--print', promptContent];
+        const args = [
+          '--print',
+          '--permission-mode', 'acceptEdits',
+          '--allowed-tools', 'Read,Write,Edit,MultiEdit,Bash,Glob,Grep,LS',
+          promptContent
+        ];
 
         console.log(`Executing: ${command} --print [prompt content]`);
 
@@ -149,11 +154,12 @@ Focus on implementing a complete, working solution that addresses all aspects of
         let stderr = '';
         let timeoutHandle;
 
-      child.stdout?.on('data', (data) => {
-        const output = data.toString();
-        stdout += output;
-        console.log('Claude:', output.trim());
-      });
+        child.stdout?.on('data', (data) => {
+          const output = data.toString();
+          stdout += output;
+          // Forward Claude's output in real-time
+          process.stdout.write(output);
+        });
 
       child.stderr?.on('data', (data) => {
         const output = data.toString();
