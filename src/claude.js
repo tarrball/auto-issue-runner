@@ -132,10 +132,10 @@ Focus on implementing a complete, working solution that addresses all aspects of
    */
   async runClaudeCommand(promptPath) {
     return new Promise((resolve, reject) => {
-      const command = 'claude-code';
+      const command = 'claude';
       const args = [
-        '--prompt', `$(cat "${promptPath}")`,
-        '--timeout', CONFIG.claude.timeoutMs.toString()
+        '--print',
+        `$(cat "${promptPath}")`
       ];
 
       console.log(`Executing: ${command} ${args.join(' ')}`);
