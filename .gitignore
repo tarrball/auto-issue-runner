@@ -1,0 +1,4 @@
+node_modules/
+.env
+.auto-runner.lock
+*.log
