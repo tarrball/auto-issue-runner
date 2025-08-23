@@ -59,11 +59,18 @@ class ProcessLock {
   /**
    * Sets up graceful shutdown handlers to ensure lock is released on exit
    * Handles SIGINT, SIGTERM, uncaught exceptions, and unhandled rejections
+   * @param {AutoIssueRunner} runner - The runner instance to properly shut down
    */
-  setupGracefulShutdown() {
+  setupGracefulShutdown(runner = null) {
     const cleanup = async () => {
       console.log('\\nReceived shutdown signal, cleaning up...');
-      await this.release();
+      
+      if (runner) {
+        await runner.stop();
+      } else {
+        await this.release();
+      }
+      
       process.exit(0);
     };
 
@@ -71,12 +78,24 @@ class ProcessLock {
     process.on('SIGTERM', cleanup);
     process.on('uncaughtException', async (error) => {
       console.error('Uncaught exception:', error);
-      await this.release();
+      
+      if (runner) {
+        await runner.stop();
+      } else {
+        await this.release();
+      }
+      
       process.exit(1);
     });
     process.on('unhandledRejection', async (reason) => {
       console.error('Unhandled rejection:', reason);
-      await this.release();
+      
+      if (runner) {
+        await runner.stop();
+      } else {
+        await this.release();
+      }
+      
       process.exit(1);
     });
   }

@@ -108,6 +108,17 @@ Use `Ctrl+C` (SIGINT) for graceful shutdown. The runner will:
 - Display final statistics
 - Clean up temporary files
 
+### Target Repository Setup
+
+Add these entries to your target repository's `.gitignore` to prevent auto-runner artifacts from being committed:
+
+```gitignore
+# Auto-runner temporary files
+.auto-runner.lock
+issue_prompt.md
+debug_claude_prompt.md
+```
+
 ## How It Works
 
 ### Workflow Overview

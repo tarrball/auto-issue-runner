@@ -188,9 +188,32 @@ Focus on implementing a complete, working solution that addresses all aspects of
    * Cleans up temporary files created during Claude invocation
    */
   async cleanup() {
+    const filesToClean = [
+      join(CONFIG.claude.workingDirectory, 'issue_prompt.md'),
+      join(CONFIG.claude.workingDirectory, 'debug_claude_prompt.md')
+    ];
+    
+    for (const filePath of filesToClean) {
+      try {
+        await fs.unlink(filePath);
+        console.log(`Cleaned up: ${filePath.split('/').pop()}`);
+      } catch (error) {
+        // Ignore cleanup errors - file may not exist
+      }
+    }
+  }
+
+  /**
+   * Cleans up all auto-runner artifacts from the working directory
+   */
+  async cleanupAll() {
+    await this.cleanup();
+    
+    // Also clean up lock file
     try {
-      const promptPath = join(CONFIG.claude.workingDirectory, 'issue_prompt.md');
-      await fs.unlink(promptPath);
+      const lockPath = join(CONFIG.claude.workingDirectory, '.auto-runner.lock');
+      await fs.unlink(lockPath);
+      console.log('Cleaned up: .auto-runner.lock');
     } catch (error) {
       // Ignore cleanup errors - file may not exist
     }

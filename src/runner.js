@@ -26,7 +26,7 @@ export class AutoIssueRunner {
       console.log(`Polling interval: ${CONFIG.polling.intervalMs / 1000}s`);
       
       await this.lock.acquire();
-      this.lock.setupGracefulShutdown();
+      this.lock.setupGracefulShutdown(this);
       
       this.isRunning = true;
       
@@ -120,6 +120,9 @@ export class AutoIssueRunner {
         if (!testsPass || !buildPass) {
           throw new Error('Tests or build failed after Claude implementation');
         }
+        
+        // Clean up temporary files before git operations
+        await claudeHandler.cleanup();
         
         if (await gitOps.hasChanges()) {
           const commitMessage = gitOps.generateCommitMessage(issue);
@@ -217,7 +220,8 @@ export class AutoIssueRunner {
    * @private
    */
   async cleanup() {
-    await claudeHandler.cleanup();
+    console.log('🧹 Cleaning up temporary files...');
+    await claudeHandler.cleanupAll(); // This includes lock file cleanup
     await this.lock.release();
   }
 

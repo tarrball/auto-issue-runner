@@ -2,3 +2,7 @@ node_modules/
 .env
 .auto-runner.lock
 *.log
+
+# Auto-runner temporary files
+issue_prompt.md
+debug_claude_prompt.md
