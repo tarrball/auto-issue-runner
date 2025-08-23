@@ -1,8 +1,9 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
+import { CONFIG } from './config.js';
 
 const LOCK_FILE = '.auto-runner.lock';
-const LOCK_PATH = join(process.cwd(), LOCK_FILE);
+const LOCK_PATH = join(CONFIG.claude.workingDirectory, LOCK_FILE);
 
 class ProcessLock {
   constructor() {

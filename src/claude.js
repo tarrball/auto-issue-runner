@@ -87,7 +87,7 @@ Please implement the changes described in the issue. Once complete:
 
 Focus on implementing a complete, working solution that addresses all aspects of the issue.`;
 
-    const promptPath = join(process.cwd(), 'issue_prompt.md');
+    const promptPath = join(CONFIG.claude.workingDirectory, 'issue_prompt.md');
     await fs.writeFile(promptPath, promptContent, 'utf8');
     return promptPath;
   }
@@ -145,7 +145,8 @@ Focus on implementing a complete, working solution that addresses all aspects of
         ];
 
         const child = spawn(command, args, {
-          stdio: 'inherit'
+          stdio: 'inherit',
+          cwd: CONFIG.claude.workingDirectory
         });
 
         let timeoutHandle;
@@ -188,7 +189,7 @@ Focus on implementing a complete, working solution that addresses all aspects of
    */
   async cleanup() {
     try {
-      const promptPath = join(process.cwd(), 'issue_prompt.md');
+      const promptPath = join(CONFIG.claude.workingDirectory, 'issue_prompt.md');
       await fs.unlink(promptPath);
     } catch (error) {
       // Ignore cleanup errors - file may not exist

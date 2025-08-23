@@ -16,7 +16,7 @@ export class GitOperations {
     return new Promise((resolve, reject) => {
       const child = spawn('git', args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        cwd: process.cwd(),
+        cwd: CONFIG.claude.workingDirectory,
         ...options
       });
 
@@ -198,7 +198,7 @@ export class GitOperations {
       // Use shell to properly handle complex commands with pipes, quotes, etc.
       const child = spawn(command, [], {
         stdio: 'inherit',
-        cwd: process.cwd(),
+        cwd: CONFIG.claude.workingDirectory,
         shell: true
       });
 

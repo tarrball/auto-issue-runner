@@ -48,7 +48,8 @@ export const CONFIG = {
     build: getOptionalEnv('BUILD_COMMAND')
   },
   claude: {
-    timeoutMs: parseInt(getOptionalEnv('CLAUDE_TIMEOUT_MS', '300000'), 10)
+    timeoutMs: parseInt(getOptionalEnv('CLAUDE_TIMEOUT_MS', '300000'), 10),
+    workingDirectory: getRequiredEnv('CLAUDE_WORKING_DIRECTORY')
   },
   polling: {
     intervalMs: parseInt(getOptionalEnv('POLLING_INTERVAL_MS', '180000'), 10) // 3 minutes
@@ -70,5 +71,6 @@ export function validateConfig() {
   
   console.log('Configuration loaded successfully');
   console.log(`Repository: ${CONFIG.github.owner}/${CONFIG.github.repo}`);
+  console.log(`Working Directory: ${CONFIG.claude.workingDirectory}`);
   console.log(`Labels: ${CONFIG.labels.issue}, ${CONFIG.labels.claudeHelpWanted}`);
 }
