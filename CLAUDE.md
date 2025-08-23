@@ -4,19 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Auto Issue Runner is a Node.js automation tool that continuously processes GitHub issues by invoking Claude Code to implement solutions and create pull requests. It uses ES modules and requires Node.js 18+.
+Auto Issue Runner is a Python automation tool that continuously processes GitHub issues by invoking Claude Code to implement solutions and create pull requests. It uses modern async/await patterns and requires Python 3.11+.
 
 ## Development Commands
 
 ```bash
-# Start the runner in production mode
-npm start
+# Setup development environment (one time)
+make dev-setup
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Start with file watching for development
-npm run dev
+# Install package and dependencies
+make install
 
-# Install dependencies
-npm install
+# Run quality checks
+make check    # Runs format, lint, typecheck, test
+
+# Individual tools
+make format   # black .
+make lint     # ruff check . --fix
+make typecheck # mypy .
+make test     # pytest
+
+# Run the application
+make run      # python -m auto_issue_runner.main
 ```
 
 ## Configuration
@@ -24,44 +34,56 @@ npm install
 The application uses environment variables configured in `.env` file:
 
 - Copy `.env.example` to `.env` before running
-- Required variables: `GITHUB_PAT`, `GITHUB_OWNER`, `GITHUB_REPO`, `GITHUB_REPO_URL`
+- Required variables: `GITHUB_PAT`, `GITHUB_OWNER`, `GITHUB_REPO`, `GITHUB_REPO_URL`, `CLAUDE_WORKING_DIRECTORY`
 - Optional variables include test/build commands, timeouts, and polling intervals
-- Configuration validation happens at startup via `src/config.js`
+- Configuration validation happens at startup via `src/auto_issue_runner/config.py`
 
 ## Architecture
 
 ### Core Components
 
-- **`src/index.js`**: Entry point with signal handlers and startup validation
-- **`src/runner.js`**: Main orchestrator (`AutoIssueRunner` class) managing the processing cycle
-- **`src/config.js`**: Environment variable management and validation
-- **`src/issues.js`**: GitHub issue selection and filtering logic  
-- **`src/claude.js`**: Claude Code invocation and context building
-- **`src/git.js`**: Git operations (branching, commits, pushing)
-- **`src/pr.js`**: Pull request creation and management
-- **`src/github.js`**: GitHub API client wrapper
-- **`src/lock.js`**: Process locking to prevent concurrent runs
+- **`src/auto_issue_runner/main.py`**: Entry point with async event loop and startup validation
+- **`src/auto_issue_runner/runner.py`**: Main orchestrator (`AutoIssueRunner` class) with async coordination
+- **`src/auto_issue_runner/config.py`**: Pydantic-based configuration management and validation
+- **`src/auto_issue_runner/issue_selector.py`**: GitHub issue selection with single PR limit
+- **`src/auto_issue_runner/claude_handler.py`**: Claude Code subprocess management with proper permissions
+- **`src/auto_issue_runner/git_operations.py`**: Git operations with proper working directory
+- **`src/auto_issue_runner/pr_manager.py`**: Pull request creation and management
+- **`src/auto_issue_runner/github_client.py`**: Async GitHub API client with retry logic
+- **`src/auto_issue_runner/process_lock.py`**: Process locking with graceful shutdown
+- **`src/auto_issue_runner/validators.py`**: Input validation for security
 
 ### Processing Flow
 
 1. **Issue Discovery**: Finds eligible issues with required labels, unassigned, oldest first
-2. **Branch Creation**: Creates `auto/<issue-number>-<slug>` branches
-3. **Claude Invocation**: Runs Claude Code with repository context and issue details
-4. **Testing/Building**: Executes configured `TEST_COMMAND` and `BUILD_COMMAND`
-5. **Commit & PR**: Creates commits with conventional commit format and opens pull requests
+2. **Single PR Check**: Only processes issues when NO Claude PRs are open (prevents conflicts)
+3. **Branch Creation**: Creates `auto/<issue-number>-<slug>` branches with proper sanitization
+4. **Claude Invocation**: Runs Claude with comprehensive context and pre-approved tool permissions
+5. **Testing/Building**: Executes configured commands with proper working directory
+6. **Commit & PR**: Creates conventional commits and opens pull requests with detailed descriptions
 
 ### Error Handling Patterns
 
-- Process locks prevent multiple instances
-- Claude timeouts are retried once before skipping
-- Failed tests/builds create draft PRs with failure details
-- GitHub API rate limiting uses exponential backoff
-- Graceful shutdown on SIGINT/SIGTERM with final statistics
+- **Async coordination**: Prevents overlapping cycles and race conditions
+- **Process locks**: Prevent multiple instances with graceful cleanup
+- **Claude timeouts**: Proper subprocess management with configurable timeouts
+- **Input validation**: Sanitizes GitHub data to prevent injection attacks
+- **GitHub API rate limiting**: Exponential backoff with proper retry logic
+- **Graceful shutdown**: Clean shutdown with resource cleanup and final statistics
 
 ## Development Notes
 
-- All modules use ES6 imports/exports
-- No test framework is configured - test commands come from environment
-- Console output includes emoji indicators and JSON summaries
-- Process runs continuously with configurable polling intervals
-- Lock files (`.auto-runner.lock`) prevent duplicate execution
+- **Modern Python**: Uses async/await, type hints, and Pydantic for validation
+- **Quality tooling**: Black, Ruff, MyPy with strict configuration
+- **Testing**: Pytest with async support and coverage reporting
+- **Security**: Input validation, subprocess security, no shell injection
+- **Observability**: Structured logging with colors and emoji indicators
+- **Type safety**: Full type annotations with `py.typed` marker
+- **Documentation**: Comprehensive docstrings and README
+
+## Important Instruction Reminders
+
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

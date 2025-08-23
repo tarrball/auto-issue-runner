@@ -1,60 +1,79 @@
-# Auto Next Issue Runner
+# Auto Issue Runner
 
-A Node.js automation tool that continuously works through GitHub issues by invoking Claude Code to implement solutions and create pull requests.
+A Python automation tool that continuously works through GitHub issues by invoking Claude Code to implement solutions and create pull requests.
 
-## Features
+## ✨ Key Features
 
-- 🔄 Continuously polls for eligible GitHub issues
-- 🤖 Uses Claude Code to implement solutions
-- 🌟 Creates well-formatted pull requests automatically
-- 🔒 Process locking to prevent multiple instances
-- ⚡ Rate limiting and retry logic for GitHub API
-- 📊 Comprehensive logging and statistics
-- 🛡️ Robust error handling and graceful shutdown
+- 🔒 **Single PR Policy**: Only one Claude PR open at any time (prevents conflicts)
+- ⚡ **Proper Async Coordination**: No more intermingled output or timing issues  
+- 🛡️ **Better Process Management**: Reliable subprocess handling with proper cleanup
+- 🤖 **Claude Integration**: Pre-approved tool permissions for autonomous operation
+- 📊 **Comprehensive Logging**: Colorful, structured logging with progress tracking
+- 🧹 **Robust Cleanup**: Automatic cleanup of temporary files before commits
+- 🔄 **Graceful Shutdown**: Clean stop on Ctrl+C with proper resource cleanup
 
-## Prerequisites
+## 🚀 Quick Start
 
-- Node.js 18.0.0 or higher
-- Claude Code CLI installed and accessible in PATH
-- Git configured with appropriate credentials
-- GitHub Personal Access Token with required permissions
+### Prerequisites
 
-## Installation
+- **Python 3.11+**
+- **Claude Code CLI** installed and accessible in PATH
+- **Git** configured with appropriate credentials  
+- **GitHub Personal Access Token** with required permissions
 
-1. Clone or download this project
-2. Install dependencies:
+### Installation
+
+1. **Setup development environment:**
    ```bash
-   npm install
+   cd src
+   make dev-setup
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. Copy the environment template:
+2. **Install package and dependencies:**
+   ```bash
+   make install
+   # Or manually: pip install -e .[dev]
+   ```
+
+3. **Configure environment:**
    ```bash
    cp .env.example .env
+   # Edit .env with your configuration
    ```
 
-4. Configure your environment variables (see Configuration section)
+4. **Run quality checks:**
+   ```bash
+   make check  # Runs format, lint, typecheck, test
+   ```
 
-## Configuration
+5. **Run the tool:**
+   ```bash
+   make run
+   # Or: python -m auto_issue_runner.main
+   # Or: auto-issue-runner (after install)
+   ```
 
-Create a `.env` file with the following variables:
+## ⚙️ Configuration
 
-```env
+Edit your `.env` file with these required settings:
+
+```bash
 # GitHub Configuration (Required)
 GITHUB_PAT=ghp_your_personal_access_token_here
 GITHUB_OWNER=your-github-username
 GITHUB_REPO=your-repository-name
 GITHUB_REPO_URL=https://github.com/your-username/your-repo.git
-GITHUB_DEFAULT_BRANCH=main
 
-# Issue Labels (Optional)
+# Working Directory (Required) - where Claude will operate
+CLAUDE_WORKING_DIRECTORY=/path/to/your/target/repository
+
+# Optional Settings
+GITHUB_DEFAULT_BRANCH=main
 ISSUE_LABEL=auto
 CLAUDE_HELP_WANTED_LABEL=claude-help-wanted
-
-# Commands (Optional)
 TEST_COMMAND=npm test
 BUILD_COMMAND=npm run build
-
-# Timeouts (Optional)
 CLAUDE_TIMEOUT_MS=300000
 POLLING_INTERVAL_MS=180000
 ```
@@ -68,50 +87,119 @@ Your Personal Access Token should have the following permissions for the target 
 - **Issues**: Read and Write
 - **Metadata**: Read
 
-## Issue Selection Rules
+## 🎯 How It Works
+
+### Single PR Policy
+- ✅ **Processes issues** when no Claude PRs are open
+- 🚫 **Waits and polls** when there's an open Claude PR
+- 📝 **Shows which PRs** are blocking new work
+
+### Issue Selection Rules
 
 The runner will process issues that meet ALL of the following criteria:
 
-- ✅ Open state
-- ✅ Has both required labels (`ISSUE_LABEL` AND `CLAUDE_HELP_WANTED_LABEL`)
-- ✅ Unassigned
-- ✅ No existing open pull request from this bot
-- ✅ Oldest first (FIFO processing)
+- ✅ **Open state**
+- ✅ **Has both required labels** (`ISSUE_LABEL` AND `CLAUDE_HELP_WANTED_LABEL`)
+- ✅ **Unassigned**
+- ✅ **No open Claude PRs exist** (single PR policy)
+- ✅ **Oldest first** (FIFO processing)
 
-## Usage
+### Processing Flow
 
-### Start the Runner
+1. **🔍 Issue Discovery**: Finds eligible issues (with required labels, unassigned)
+2. **🚫 Single PR Check**: Only proceeds when no Claude PRs are open
+3. **🌿 Branch Creation**: Creates `auto/<issue-number>-<slug>` branches with sanitization
+4. **🤖 Claude Invocation**: Runs Claude with comprehensive context and pre-approved permissions
+5. **🧪 Testing & Building**: Executes configured test/build commands with proper working directory
+6. **💾 Commit & Push**: Creates conventional commits and pushes changes
+7. **📝 Pull Request**: Opens PR with detailed description linking to issue
 
-```bash
-npm start
+### Async Coordination
+- **No overlapping cycles**: Previous cycle must complete before next begins
+- **Clean subprocess management**: Proper Claude process handling with timeouts
+- **Graceful shutdown**: Ctrl+C waits for current cycle to finish, then cleans up
+
+## 🛠️ Development
+
+### Project Structure
+```
+src/auto_issue_runner/
+├── __init__.py
+├── main.py              # Entry point and CLI
+├── config.py            # Pydantic configuration with validation
+├── logging_config.py    # Colorful logging setup
+├── runner.py            # Main orchestrator with async coordination
+├── github_client.py     # GitHub API client with retry logic
+├── issue_selector.py    # Issue selection with single PR limit
+├── claude_handler.py    # Claude subprocess management
+├── git_operations.py    # Git commands with proper working directory
+├── pr_manager.py        # Pull request creation
+├── process_lock.py      # Process locking and signal handling
+└── validators.py        # Input validation for security
 ```
 
-The runner will:
-1. Validate configuration
-2. Acquire a process lock
-3. Run an initial cycle
-4. Start polling at the configured interval
+### Quality Tools
 
-### Development Mode
+Run individual tools or all together:
 
 ```bash
-npm run dev
+make format      # Black code formatting
+make lint        # Ruff linting with auto-fix
+make typecheck   # MyPy type checking  
+make test        # Pytest with coverage
+make check       # All of the above
 ```
 
-Starts the runner with file watching for development.
+### Usage Commands
 
-### Stop the Runner
+- **Start**: `make run` or `python -m auto_issue_runner.main`
+- **Stop**: Press `Ctrl+C` for graceful shutdown
+- **Install as package**: `make install` (enables `auto-issue-runner` command)
 
-Use `Ctrl+C` (SIGINT) for graceful shutdown. The runner will:
-- Complete the current cycle
-- Release the process lock
-- Display final statistics
-- Clean up temporary files
+## 📊 Monitoring & Output
+
+### Rich Console Logging
+```
+🚀 Starting Auto Issue Runner...
+   Repository: username/repo-name
+   Working Directory: /path/to/repo
+   Polling Interval: 180s
+🔍 Searching for eligible issues...
+🚫 Skipping all issues - Claude has open PR(s):
+   - PR #123: Fix login bug (auto/456-fix-login-bug)
+⏳ Waiting 180s before next cycle...
+```
+
+### Statistics
+The runner provides detailed statistics:
+- **Cycle completion rate**
+- **Average processing time**  
+- **Success/failure breakdown**
+- **Real-time progress logs**
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+1. **"Claude Code command not found"**
+   - Ensure `claude` is in your PATH: `which claude`
+   - Install Claude Code if needed
+
+2. **"Working directory doesn't exist"**
+   - Check `CLAUDE_WORKING_DIRECTORY` path in `.env`
+   - Ensure the path exists and is a git repository
+
+3. **"Permission denied" errors**
+   - Check GitHub PAT permissions
+   - Ensure git is configured with proper credentials
+
+4. **Process won't start**
+   - Check if another instance is running: `ps aux | grep auto-issue-runner`
+   - Remove stale lock file: `rm /path/to/repo/.auto-runner.lock`
 
 ### Target Repository Setup
 
-Add these entries to your target repository's `.gitignore` to prevent auto-runner artifacts from being committed:
-
+Add these to your target repository's `.gitignore`:
 ```gitignore
 # Auto-runner temporary files
 .auto-runner.lock
@@ -119,143 +207,32 @@ issue_prompt.md
 debug_claude_prompt.md
 ```
 
-## How It Works
+## 🔒 Security Features
 
-### Workflow Overview
+- **Input validation**: Sanitizes GitHub data to prevent injection attacks
+- **Subprocess security**: Uses secure subprocess management (no shell injection)
+- **Environment isolation**: Uses `.env` files with templates
+- **Token security**: Never logs or exposes secrets
+- **Branch name sanitization**: Prevents malicious branch names
 
-1. **Issue Discovery**: Searches for eligible issues using GitHub Search API
-2. **Branch Creation**: Creates a new branch with pattern `auto/<issue-number>-<slug>`
-3. **Context Generation**: Builds comprehensive context from issue details and repository
-4. **Claude Invocation**: Runs Claude Code with detailed prompts and repository context
-5. **Testing & Building**: Runs configured test and build commands
-6. **Commit Creation**: Creates atomic commits with conventional commit messages
-7. **Pull Request**: Opens a PR with detailed description and closes the issue
+## 🚀 Production Ready
 
-### Error Handling
+This Python version includes enterprise-grade features:
 
-- **Claude Timeouts**: Retries once, then skips issue
-- **Test/Build Failures**: Creates draft PR with failure details
-- **GitHub API Limits**: Implements exponential backoff
-- **Process Crashes**: Lock file prevents duplicate runs
+- **🔧 Modern tooling**: Black, Ruff, MyPy with strict configuration
+- **🧪 Testing**: Pytest with async support and coverage reporting  
+- **📝 Type safety**: Full type annotations with `py.typed` marker
+- **📚 Documentation**: Comprehensive docstrings and API documentation
+- **🛡️ Security**: Input validation and secure subprocess management
 
-### Commit Quality
-
-All commits follow these standards:
-- **Conventional Commits**: `type(scope): description`
-- **Atomic Changes**: Each commit represents one logical change  
-- **Descriptive Messages**: Include the "why" not just the "what"
-- **Issue References**: Include `Closes #123` in commit body
-
-## Output & Monitoring
-
-### Console Output
-
-The runner provides detailed console logs for each step:
-
-```
-🚀 Starting Auto Issue Runner...
-Repository: username/repo-name
-Polling interval: 180s
-✅ Configuration valid
-🔒 Lock acquired with PID 12345
-=== Starting new cycle at 2024-01-15T10:30:00.000Z ===
-📝 Selected issue #42: Add user authentication
-🌿 Creating branch: auto/42-add-user-authentication
-🤖 Invoking Claude Code...
-✅ Claude Code completed successfully
-🧪 Running tests: npm test
-🏗️  Running build: npm run build
-📤 Pushing branch to origin...
-📝 PR created: https://github.com/user/repo/pull/123
-✅ Successfully processed issue #42
-```
-
-### JSON Output
-
-Each cycle produces a JSON summary:
-
-```json
-{
-  "timestamp": "2024-01-15T10:30:00.000Z",
-  "issue": 42,
-  "branch": "auto/42-add-user-authentication", 
-  "pr_number": 123,
-  "status": "SUCCESS",
-  "duration_ms": 45000
-}
-```
-
-### Status Values
-
-- `SUCCESS`: Issue implemented and PR created
-- `PARTIAL`: Partial work committed as draft PR  
-- `FAILED`: Implementation failed, no changes
-- `NO_CHANGES`: Claude ran but made no changes
-- `NO_ISSUES`: No eligible issues found
-- `ERROR`: System error during processing
-
-## Troubleshooting
-
-### Common Issues
-
-**Lock file exists**
-```
-Error: Auto runner already running with PID 12345
-```
-- Check if another instance is running: `ps aux | grep node`
-- Remove stale lock: `rm .auto-runner.lock`
-
-**GitHub API rate limits**
-```
-Rate limited, waiting 60000ms before retry 1/3
-```
-- Normal behavior, the runner will wait and retry
-- Consider reducing polling frequency
-
-**Claude Code timeouts**
-```
-Claude Code failed after 2 attempts: timeout
-```
-- Increase `CLAUDE_TIMEOUT_MS` in .env
-- Simplify issue descriptions
-- Check Claude Code is properly installed
-
-**Missing environment variables**
-```
-Required environment variable GITHUB_PAT is not set
-```
-- Ensure .env file exists and is configured
-- Verify all required variables are set
-
-### Debug Mode
-
-Set environment variable for verbose logging:
-```bash
-DEBUG=1 npm start
-```
-
-### Log Files
-
-The runner doesn't create log files by default. To capture logs:
-```bash
-npm start > runner.log 2>&1
-```
-
-## Security Considerations
-
-- **Token Security**: Never commit `.env` or expose your GitHub PAT
-- **Branch Names**: Generated names are sanitized to prevent injection
-- **API Scope**: Use minimal required permissions for GitHub PAT
-- **Process Lock**: Prevents accidental multiple instances
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make changes following existing patterns
-4. Test thoroughly
+3. Run `make check` to ensure quality
+4. Add tests for new functionality  
 5. Submit a pull request
 
-## License
+## 📄 License
 
 MIT License - see LICENSE file for details
