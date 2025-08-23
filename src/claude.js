@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import { CONFIG } from './config.js';
 import github from './github.js';
+import { CLAUDE_ALLOWED_TOOLS_STRING } from './constants.js';
 
 /**
  * Handles Claude Code invocation and context generation
@@ -135,52 +136,40 @@ Focus on implementing a complete, working solution that addresses all aspects of
       try {
         // Read the prompt file content
         const promptContent = await fs.readFile(promptPath, 'utf8');
-        
         const command = 'claude';
         const args = [
-          '--print',
           '--permission-mode', 'acceptEdits',
-          '--allowed-tools', 'Read,Write,Edit,MultiEdit,Bash,Glob,Grep,LS',
+          '--allowed-tools', CLAUDE_ALLOWED_TOOLS_STRING,
+          '--print',
           promptContent
         ];
 
-        console.log(`Executing: ${command} --print [prompt content]`);
-
         const child = spawn(command, args, {
-          stdio: 'pipe'
+          stdio: 'inherit'
         });
 
-        let stdout = '';
-        let stderr = '';
         let timeoutHandle;
 
-        child.stdout?.on('data', (data) => {
-          const output = data.toString();
-          stdout += output;
-          // Forward Claude's output in real-time
-          process.stdout.write(output);
+        child.on('close', async (code) => {
+          if (timeoutHandle) clearTimeout(timeoutHandle);
+          
+          if (code === 0) {
+            // Clean up debug file on success
+            try {
+              await fs.unlink(debugPromptPath);
+            } catch (error) {
+              // Ignore cleanup errors
+            }
+            resolve({ exitCode: code });
+          } else {
+            reject(new Error(`Claude Code exited with code ${code}`));
+          }
         });
 
-      child.stderr?.on('data', (data) => {
-        const output = data.toString();
-        stderr += output;
-        console.error('Claude Error:', output.trim());
-      });
-
-      child.on('close', (code) => {
-        if (timeoutHandle) clearTimeout(timeoutHandle);
-        
-        if (code === 0) {
-          resolve({ stdout, stderr, exitCode: code });
-        } else {
-          reject(new Error(`Claude Code exited with code ${code}. stderr: ${stderr}`));
-        }
-      });
-
-      child.on('error', (error) => {
-        if (timeoutHandle) clearTimeout(timeoutHandle);
-        reject(new Error(`Failed to spawn Claude Code: ${error.message}`));
-      });
+        child.on('error', (error) => {
+          if (timeoutHandle) clearTimeout(timeoutHandle);
+          reject(new Error(`Failed to spawn Claude Code: ${error.message}`));
+        });
 
         // Set timeout with buffer beyond Claude's internal timeout
         timeoutHandle = setTimeout(() => {
