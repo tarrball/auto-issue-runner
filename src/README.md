@@ -1,4 +1,6 @@
-# Auto Issue Runner (Python Edition)
+# Auto Issue Runner
+
+⚠️ This was a `node` project that was tested and working. It had some issues, so I converted it to Python. I haven't tested it out much yet.
 
 A Python automation tool that continuously works through GitHub issues by invoking Claude Code to implement solutions and create pull requests.
 
